@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { apiClient } from '../api'
-import { Play, Loader2, CheckCircle, AlertCircle, Globe, Clock, FileText } from 'lucide-react'
+import { Play, Loader2, AlertCircle, Globe, Clock, FileText } from 'lucide-react'
 
 export default function Crawler() {
   const [url, setUrl] = useState('')
   const [maxPages, setMaxPages] = useState(50)
   const [checkCWV, setCheckCWV] = useState(true)
   const [loading, setLoading] = useState(false)
-  const [taskId, setTaskId] = useState<string | null>(null)
+  const [, setTaskId] = useState<string | null>(null)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
 

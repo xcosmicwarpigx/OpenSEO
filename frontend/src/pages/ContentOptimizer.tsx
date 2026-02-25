@@ -2,15 +2,6 @@ import { useState } from 'react'
 import { apiClient } from '../api'
 import { Loader2, Play, CheckCircle, AlertTriangle, BookOpen, Type, Image as ImageIcon, Link } from 'lucide-react'
 
-interface ReadabilityScore {
-  flesch_reading_ease: number
-  flesch_kincaid_grade: number
-  word_count: number
-  sentence_count: number
-  avg_words_per_sentence: number
-  reading_time_minutes: number
-}
-
 interface Suggestion {
   category: string
   priority: 'high' | 'medium' | 'low'

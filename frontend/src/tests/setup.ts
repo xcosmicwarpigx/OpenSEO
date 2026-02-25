@@ -1,21 +1,23 @@
+/// <reference types="vitest/globals" />
 import '@testing-library/jest-dom'
-import { vi } from 'vitest'
 
 // Mock matchMedia
-global.matchMedia = global.matchMedia || function() {
+;(globalThis as any).matchMedia = (globalThis as any).matchMedia || function() {
   return {
     matches: false,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => {},
   }
 }
 
 // Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
+;(globalThis as any).ResizeObserver = function() {
+  return {
+    observe: () => {},
+    unobserve: () => {},
+    disconnect: () => {},
+  }
+}

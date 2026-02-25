@@ -1,9 +1,9 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Home, Spider, BarChart3, FileText, List, Settings } from 'lucide-react'
+import { Home, Bug, BarChart3, FileText, List, Settings } from 'lucide-react'
 
 const menuItems = [
   { path: '/', icon: Home, label: 'Dashboard' },
-  { path: '/crawler', icon: Spider, label: 'Site Crawler' },
+  { path: '/crawler', icon: Bug, label: 'Site Crawler' },
   { path: '/competitive', icon: BarChart3, label: 'Competitive Intel' },
   { path: '/content-optimizer', icon: FileText, label: 'Content Optimizer' },
   { path: '/bulk-analyzer', icon: List, label: 'Bulk Analyzer' },
