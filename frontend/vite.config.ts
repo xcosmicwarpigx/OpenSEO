@@ -13,4 +13,18 @@ export default defineConfig({
       },
     },
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/tests/setup.ts',
+    coverage: {
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/',
+        'src/tests/',
+        '**/*.d.ts',
+        '**/*.config.*',
+      ],
+    },
+  },
 })

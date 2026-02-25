@@ -12,3 +12,8 @@ aiofiles==23.2.1
 selenium==4.17.2
 webdriver-manager==4.0.1
 lxml==5.1.0
+
+# Testing dependencies (also install requirements-dev.txt for full test suite)
+pytest==7.4.4
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0

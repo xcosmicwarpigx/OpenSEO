@@ -274,6 +274,43 @@ make dev-frontend # Run frontend locally
 make clean       # Clean up Docker
 ```
 
+## Testing
+
+### Backend Tests
+```bash
+cd backend
+pip install -r requirements-dev.txt
+pytest                    # Run all tests
+pytest tests/unit -v     # Run unit tests only
+pytest tests/integration -v  # Run integration tests only
+pytest --cov            # Run with coverage
+```
+
+### Frontend Tests
+```bash
+cd frontend
+npm install
+npm test                # Run tests in watch mode
+npm run coverage        # Run with coverage report
+```
+
+### GitHub Actions CI
+Tests run automatically on:
+- Push to `main`, `master`, `develop` branches
+- Push to `feature/*` branches
+- Pull requests
+
+CI includes:
+- Backend unit & integration tests
+- Frontend unit tests with coverage
+- Docker build tests
+- Linting and type checking
+- Security scans (Bandit, npm audit)
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and contribution guidelines.
+
 ## License
 
 MIT License - feel free to use for personal or commercial projects.
