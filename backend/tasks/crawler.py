@@ -434,7 +434,7 @@ def crawl_website(self, base_url: str, max_pages: int = 100, check_cwv: bool = T
                 # Generate accessibility summary
                 accessibility_summary = {
                     "avg_score": sum(p.readability.flesch_reading_ease or 0 for p in pages if p.readability) / len([p for p in pages if p.readability]) if pages else 0,
-                    "total_issues": sum(len([i for i in all_issues if i.issue_type.startswith("accessibility_")]),
+                    "total_issues": sum(1 for i in all_issues if i.issue_type.startswith("accessibility_")),
                     "pages_with_critical": len(set(i.url for i in all_issues if i.severity == "error" and i.issue_type.startswith("accessibility_")))
                 }
                 

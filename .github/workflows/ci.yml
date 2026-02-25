@@ -65,7 +65,7 @@ jobs:
         pytest tests/integration -v
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         directory: ./backend
         files: ./coverage.xml
@@ -73,7 +73,7 @@ jobs:
         name: backend-coverage
 
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: backend-test-results
@@ -108,7 +108,7 @@ jobs:
       run: npm run build
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         directory: ./frontend
         files: ./coverage/coverage-final.json
@@ -116,7 +116,7 @@ jobs:
         name: frontend-coverage
 
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: frontend-test-results
@@ -213,7 +213,7 @@ jobs:
       run: npm audit --audit-level moderate || true
 
     - name: Upload security scan results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-scan-results
