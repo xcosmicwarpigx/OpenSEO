@@ -27,6 +27,17 @@ export interface ShareOfVoiceRequest {
   keywords: string[]
 }
 
+export interface ContentOptimizerRequest {
+  url: string
+  target_keywords?: string[]
+  competitor_urls?: string[]
+}
+
+export interface BulkUrlRequest {
+  urls: string[]
+  checks?: string[]
+}
+
 export const apiClient = {
   // Crawler
   startCrawl: (data: CrawlRequest) => api.post('/api/crawl', data),
@@ -42,6 +53,18 @@ export const apiClient = {
   
   getCompetitorOverview: (domain: string) => api.get(`/api/competitive/overview/${domain}`),
   getOverviewResult: (taskId: string) => api.get(`/api/competitive/overview/result/${taskId}`),
+  
+  // Content Optimizer
+  analyzeContentDirect: (data: ContentOptimizerRequest) => api.post('/api/tools/content-optimizer/analyze', data),
+  startContentOptimizer: (data: ContentOptimizerRequest) => api.post('/api/tools/content-optimizer', data),
+  getContentOptimizerResult: (taskId: string) => api.get(`/api/tools/content-optimizer/${taskId}`),
+  
+  // Bulk URL Analyzer
+  analyzeBulkDirect: (data: BulkUrlRequest) => api.post('/api/tools/bulk-url-analyzer/analyze', data, {
+    headers: { 'Accept': 'text/csv' }
+  }),
+  startBulkAnalyzer: (data: BulkUrlRequest) => api.post('/api/tools/bulk-url-analyzer', data),
+  getBulkAnalyzerResult: (taskId: string) => api.get(`/api/tools/bulk-url-analyzer/${taskId}`),
   
   // Dashboard
   getDashboardStats: () => api.get('/api/dashboard/stats'),
