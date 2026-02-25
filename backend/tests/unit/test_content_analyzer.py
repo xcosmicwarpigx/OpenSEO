@@ -5,10 +5,10 @@ import pytest
 from utils.content_analyzer import (
     count_syllables,
     calculate_readability,
-    estimate_ctr,
     calculate_content_score,
     get_readability_interpretation
 )
+from tasks.competitive import estimate_ctr
 from models import ReadabilityScore, ContentQuality, KeywordDensity
 
 
