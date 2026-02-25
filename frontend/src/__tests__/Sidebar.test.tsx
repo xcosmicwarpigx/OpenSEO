@@ -1,23 +1,14 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
-
-// Mock useLocation
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom')
-  return {
-    ...actual,
-    useLocation: () => ({ pathname: '/' }),
-  }
-})
 
 describe('Sidebar', () => {
   it('renders OpenSEO branding', () => {
     render(
-      <BrowserRouter>
+      <MemoryRouter>
         <Sidebar />
-      </BrowserRouter>
+      </MemoryRouter>
     )
     
     expect(screen.getByText('OpenSEO')).toBeInTheDocument()
@@ -26,9 +17,9 @@ describe('Sidebar', () => {
 
   it('renders navigation links', () => {
     render(
-      <BrowserRouter>
+      <MemoryRouter>
         <Sidebar />
-      </BrowserRouter>
+      </MemoryRouter>
     )
     
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
@@ -40,9 +31,9 @@ describe('Sidebar', () => {
 
   it('renders settings link', () => {
     render(
-      <BrowserRouter>
+      <MemoryRouter>
         <Sidebar />
-      </BrowserRouter>
+      </MemoryRouter>
     )
     
     expect(screen.getByText('Settings')).toBeInTheDocument()

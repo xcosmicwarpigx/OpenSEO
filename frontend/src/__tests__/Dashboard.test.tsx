@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import Dashboard from '../pages/Dashboard'
 
 // Mock the API module
@@ -22,9 +22,9 @@ vi.mock('../api', () => ({
 describe('Dashboard', () => {
   it('renders dashboard title', () => {
     render(
-      <BrowserRouter>
+      <MemoryRouter>
         <Dashboard />
-      </BrowserRouter>
+      </MemoryRouter>
     )
     
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
@@ -32,9 +32,9 @@ describe('Dashboard', () => {
 
   it('renders stat cards', () => {
     render(
-      <BrowserRouter>
+      <MemoryRouter>
         <Dashboard />
-      </BrowserRouter>
+      </MemoryRouter>
     )
     
     expect(screen.getByText('Total Crawls')).toBeInTheDocument()
@@ -45,9 +45,9 @@ describe('Dashboard', () => {
 
   it('renders charts section', () => {
     render(
-      <BrowserRouter>
+      <MemoryRouter>
         <Dashboard />
-      </BrowserRouter>
+      </MemoryRouter>
     )
     
     expect(screen.getByText('Organic Traffic Trend')).toBeInTheDocument()

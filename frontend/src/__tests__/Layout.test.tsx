@@ -1,16 +1,16 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router-dom'
 import Layout from '../components/Layout'
 
 describe('Layout', () => {
   it('renders children content', () => {
     render(
-      <BrowserRouter>
+      <MemoryRouter>
         <Layout>
           <div data-testid="test-content">Test Content</div>
         </Layout>
-      </BrowserRouter>
+      </MemoryRouter>
     )
     
     expect(screen.getByTestId('test-content')).toBeInTheDocument()
@@ -19,11 +19,11 @@ describe('Layout', () => {
 
   it('renders sidebar', () => {
     render(
-      <BrowserRouter>
+      <MemoryRouter>
         <Layout>
           <div>Content</div>
         </Layout>
-      </BrowserRouter>
+      </MemoryRouter>
     )
     
     expect(screen.getByText('OpenSEO')).toBeInTheDocument()

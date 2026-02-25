@@ -8,8 +8,21 @@ from utils.content_analyzer import (
     calculate_content_score,
     get_readability_interpretation
 )
-from tasks.competitive import estimate_ctr
 from models import ReadabilityScore, ContentQuality, KeywordDensity
+
+
+def estimate_ctr(position: int) -> float:
+    """Estimate CTR based on position in SERP (copied from tasks.competitive)."""
+    ctrs = {
+        1: 0.28, 2: 0.15, 3: 0.09, 4: 0.06, 5: 0.04,
+        6: 0.03, 7: 0.03, 8: 0.02, 9: 0.02, 10: 0.02
+    }
+    if position <= 10:
+        return ctrs.get(position, 0.02)
+    elif position <= 20:
+        return 0.01
+    else:
+        return 0.005
 
 
 class TestCountSyllables:

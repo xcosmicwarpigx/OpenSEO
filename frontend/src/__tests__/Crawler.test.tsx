@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router-dom'
 import Crawler from '../pages/Crawler'
 
 // Mock the API module
@@ -18,9 +18,9 @@ vi.mock('../api', () => ({
 describe('Crawler', () => {
   it('renders crawler page title', () => {
     render(
-      <BrowserRouter>
+      <MemoryRouter>
         <Crawler />
-      </BrowserRouter>
+      </MemoryRouter>
     )
     
     expect(screen.getByText('Site Crawler')).toBeInTheDocument()
@@ -28,21 +28,21 @@ describe('Crawler', () => {
 
   it('renders input form', () => {
     render(
-      <BrowserRouter>
+      <MemoryRouter>
         <Crawler />
-      </BrowserRouter>
+      </MemoryRouter>
     )
     
     expect(screen.getByLabelText('Website URL')).toBeInTheDocument()
     expect(screen.getByLabelText('Max Pages')).toBeInTheDocument()
-    expect(screen.getByText('Check Core Web Vitals')).toBeInTheDocument()
+    expect(screen.getByText('Check Core Web Vitals (requires API key)')).toBeInTheDocument()
   })
 
   it('renders start crawl button', () => {
     render(
-      <BrowserRouter>
+      <MemoryRouter>
         <Crawler />
-      </BrowserRouter>
+      </MemoryRouter>
     )
     
     expect(screen.getByRole('button', { name: /start crawl/i })).toBeInTheDocument()
@@ -50,9 +50,9 @@ describe('Crawler', () => {
 
   it('updates URL input when typed', () => {
     render(
-      <BrowserRouter>
+      <MemoryRouter>
         <Crawler />
-      </BrowserRouter>
+      </MemoryRouter>
     )
     
     const input = screen.getByPlaceholderText('https://example.com')

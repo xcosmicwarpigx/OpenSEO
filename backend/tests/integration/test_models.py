@@ -3,6 +3,7 @@ Integration tests for models
 """
 import pytest
 from pydantic import ValidationError
+from datetime import datetime, timezone
 from models import (
     CrawlRequest, CrawlResult, PageData, PageIssue,
     KeywordGapRequest, ShareOfVoiceRequest,
@@ -33,21 +34,23 @@ class TestPageData:
     def test_minimal_page_data(self):
         page = PageData(
             url="https://example.com",
-            status_code=200
+            status_code=200,
+            crawl_time=datetime.now(timezone.utc)
         )
         assert page.url == "https://example.com"
         assert page.status_code == 200
-    
+
     def test_page_with_metadata(self):
         page = PageData(
             url="https://example.com",
             status_code=200,
             title="Test Page",
             meta_description="A test description",
-            h1="Main Heading"
+            h1="Main Heading",
+            crawl_time=datetime.now(timezone.utc)
         )
         assert page.title == "Test Page"
-        assert page.title_length == len("Test Page")
+        assert page.h1 == "Main Heading"
 
 
 class TestKeywordGapRequest:

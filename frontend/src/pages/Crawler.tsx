@@ -62,10 +62,11 @@ export default function Crawler() {
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="url-input" className="block text-sm font-medium text-gray-700 mb-2">
               Website URL
             </label>
             <input
+              id="url-input"
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
@@ -75,10 +76,11 @@ export default function Crawler() {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="max-pages-input" className="block text-sm font-medium text-gray-700 mb-2">
               Max Pages
             </label>
             <input
+              id="max-pages-input"
               type="number"
               value={maxPages}
               onChange={(e) => setMaxPages(Number(e.target.value))}
