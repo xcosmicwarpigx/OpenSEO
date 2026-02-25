@@ -7,7 +7,7 @@ celery_app = Celery(
     "openseo",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=["tasks.crawler", "tasks.competitive"]
+    include=["tasks.crawler", "tasks.competitive", "tools.content_optimizer", "tools.bulk_url_analyzer"]
 )
 
 celery_app.conf.update(

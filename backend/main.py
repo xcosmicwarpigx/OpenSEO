@@ -1,20 +1,24 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Response
 from fastapi.middleware.cors import CORSMiddleware
 from celery.result import AsyncResult
-from typing import Optional
+from typing import Optional, List
 
 from models import (
     CrawlRequest, CrawlResult, KeywordGapRequest, KeywordGapResult,
-    ShareOfVoiceRequest, ShareOfVoiceResult, CompetitorOverview, CrawlStatus
+    ShareOfVoiceRequest, ShareOfVoiceResult, CompetitorOverview, CrawlStatus,
+    ContentOptimizerRequest, ContentOptimizerResult,
+    BulkUrlRequest, BulkUrlResult
 )
 from tasks.crawler import crawl_website
 from tasks.competitive import analyze_keyword_gap, calculate_share_of_voice, get_competitor_overview
 from celery_app import celery_app
+from tools.content_optimizer import optimize_content
+from tools.bulk_url_analyzer import analyze_urls_bulk
 
 app = FastAPI(
     title="OpenSEO API",
-    description="Open source SEO analysis platform",
-    version="1.0.0"
+    description="Open source SEO analysis platform with advanced content optimization",
+    version="1.1.0"
 )
 
 # CORS for frontend
@@ -29,7 +33,7 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"message": "OpenSEO API", "version": "1.0.0"}
+    return {"message": "OpenSEO API", "version": "1.1.0", "features": ["crawler", "competitive_intelligence", "content_optimizer", "bulk_analyzer"]}
 
 
 @app.get("/health")
@@ -41,7 +45,7 @@ async def health():
 
 @app.post("/api/crawl", response_model=dict)
 async def start_crawl(request: CrawlRequest, background_tasks: BackgroundTasks):
-    """Start a new website crawl."""
+    """Start a new website crawl with comprehensive analysis."""
     task = crawl_website.delay(
         str(request.url),
         request.max_pages,
@@ -50,7 +54,8 @@ async def start_crawl(request: CrawlRequest, background_tasks: BackgroundTasks):
     return {
         "task_id": task.id,
         "status": "pending",
-        "message": "Crawl started successfully"
+        "message": "Crawl started successfully",
+        "features_enabled": ["content_analysis", "security_headers", "accessibility", "internal_linking", "sitemap_analysis"]
     }
 
 
@@ -185,17 +190,167 @@ async def get_overview_result(task_id: str):
     return response
 
 
+# ==================== CONTENT OPTIMIZER TOOL ====================
+
+@app.post("/api/tools/content-optimizer", response_model=dict)
+async def start_content_optimizer(request: ContentOptimizerRequest):
+    """
+    Analyze content and generate optimization suggestions.
+    
+    Analyzes:
+    - Readability (Flesch Reading Ease, Flesch-Kincaid Grade)
+    - Keyword density and placement
+    - Content quality (thin content, large paragraphs)
+    - Title/meta optimization
+    - Heading structure
+    - Image optimization
+    - Internal linking
+    
+    Returns actionable suggestions prioritized by impact.
+    """
+    task = celery_app.send_task(
+        'tools.content_optimizer.optimize_content_task',
+        args=[request.dict()]
+    )
+    return {
+        "task_id": task.id,
+        "status": "pending",
+        "message": "Content optimization analysis started"
+    }
+
+
+@app.get("/api/tools/content-optimizer/{task_id}")
+async def get_content_optimizer_result(task_id: str):
+    """Get content optimizer results."""
+    task_result = AsyncResult(task_id, app=celery_app)
+    
+    response = {
+        "task_id": task_id,
+        "status": task_result.status,
+        "result": None
+    }
+    
+    if task_result.status == "SUCCESS":
+        response["result"] = task_result.result
+    elif task_result.status == "FAILURE":
+        response["error"] = str(task_result.result)
+    
+    return response
+
+
+# Direct endpoint for immediate content optimization (no Celery)
+@app.post("/api/tools/content-optimizer/analyze", response_model=ContentOptimizerResult)
+async def analyze_content_direct(request: ContentOptimizerRequest):
+    """Analyze content immediately (for quick analysis of single pages)."""
+    try:
+        result = await optimize_content(request)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== BULK URL ANALYZER ====================
+
+@app.post("/api/tools/bulk-url-analyzer", response_model=dict)
+async def start_bulk_url_analyzer(request: BulkUrlRequest):
+    """
+    Analyze multiple URLs in parallel for common SEO issues.
+    
+    Checks:
+    - HTTP status codes
+    - Redirect chains
+    - Title/Meta/H1 presence
+    - Indexability (robots meta, X-Robots-Tag)
+    - Response times
+    
+    Returns summary statistics and CSV export.
+    """
+    if len(request.urls) > 100:
+        raise HTTPException(status_code=400, detail="Maximum 100 URLs per request")
+    
+    task = celery_app.send_task(
+        'tools.bulk_url_analyzer.analyze_bulk_task',
+        args=[request.dict()]
+    )
+    return {
+        "task_id": task.id,
+        "status": "pending",
+        "message": f"Analyzing {len(request.urls)} URLs",
+        "url_count": len(request.urls)
+    }
+
+
+@app.get("/api/tools/bulk-url-analyzer/{task_id}")
+async def get_bulk_analyzer_result(task_id: str):
+    """Get bulk URL analyzer results."""
+    task_result = AsyncResult(task_id, app=celery_app)
+    
+    response = {
+        "task_id": task_id,
+        "status": task_result.status,
+        "result": None
+    }
+    
+    if task_result.status == "SUCCESS":
+        response["result"] = task_result.result
+    elif task_result.status == "FAILURE":
+        response["error"] = str(task_result.result)
+    
+    return response
+
+
+@app.post("/api/tools/bulk-url-analyzer/analyze")
+async def analyze_bulk_direct(request: BulkUrlRequest, response: Response):
+    """Analyze URLs immediately and return CSV download."""
+    if len(request.urls) > 50:  # Lower limit for direct endpoint
+        raise HTTPException(status_code=400, detail="Maximum 50 URLs for direct analysis. Use /start for larger batches.")
+    
+    try:
+        result = await analyze_urls_bulk(request)
+        
+        # Return CSV as downloadable file
+        response.headers["Content-Disposition"] = "attachment; filename=url-analysis.csv"
+        response.headers["Content-Type"] = "text/csv"
+        return result.export_csv
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== DASHBOARD ENDPOINTS ====================
 
 @app.get("/api/dashboard/stats")
 async def get_dashboard_stats():
     """Get overall dashboard statistics."""
-    # This would aggregate data from various sources
     return {
         "total_crawls": 0,
         "active_tasks": 0,
-        "avg_core_web_vitals": None,
-        "last_updated": None
+        "tools_available": [
+            {
+                "id": "crawler",
+                "name": "Site Crawler",
+                "description": "Comprehensive site audit with content, security, and accessibility analysis"
+            },
+            {
+                "id": "keyword_gap",
+                "name": "Keyword Gap Analysis",
+                "description": "Compare keyword rankings between domains"
+            },
+            {
+                "id": "sov",
+                "name": "Share of Voice",
+                "description": "Calculate visibility scores across keyword sets"
+            },
+            {
+                "id": "content_optimizer",
+                "name": "Content Optimizer",
+                "description": "Analyze content quality and get optimization suggestions"
+            },
+            {
+                "id": "bulk_analyzer",
+                "name": "Bulk URL Analyzer",
+                "description": "Quickly check multiple URLs for common SEO issues"
+            }
+        ]
     }
 
 
