@@ -137,3 +137,28 @@ class TestBulkAnalyzerEndpoints:
         data = response.json()
         assert "task_id" in data
         assert data["url_count"] == 2
+
+
+class TestFullAuditEndpoint:
+    def test_full_audit_validation(self):
+        response = client.post("/api/audit/full", json={})
+        assert response.status_code == 422
+
+    def test_full_audit_endpoint(self, monkeypatch):
+        async def fake_audit(url: str, max_internal_urls: int = 25):
+            return {
+                "url": url,
+                "overall_score": 88,
+                "scores": {"technical": 90, "content": 86, "performance_local": 82, "accessibility": 90, "security": 85, "internal_linking": 88},
+                "mode": "local-first",
+                "recommendations": []
+            }
+
+        import main
+        monkeypatch.setattr(main, "run_full_audit", fake_audit)
+
+        response = client.post("/api/audit/full", json={"url": "https://example.com"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["mode"] == "local-first"
+        assert "overall_score" in data

@@ -426,3 +426,10 @@ class BulkUrlResult(BaseModel):
     results: List[UrlCheckResult]
     summary: Dict[str, Any]
     export_csv: str  # CSV content for download
+
+
+# ==================== FULL AUDIT ====================
+
+class FullAuditRequest(BaseModel):
+    url: str
+    max_internal_urls: int = 25

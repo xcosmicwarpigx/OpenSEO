@@ -172,6 +172,7 @@ npm run dev
 | `/api/crawl` | POST | Start comprehensive site crawl |
 | `/api/crawl/{task_id}` | GET | Get crawl status |
 | `/api/crawl/{task_id}/result` | GET | Get full crawl results |
+| `/api/audit/full` | POST | Run one-shot local-first full SEO scorecard for a URL |
 
 ### Competitive Intelligence
 | Endpoint | Method | Description |

@@ -7,13 +7,14 @@ from models import (
     CrawlRequest, CrawlResult, KeywordGapRequest, KeywordGapResult,
     ShareOfVoiceRequest, ShareOfVoiceResult, CompetitorOverview, CrawlStatus,
     ContentOptimizerRequest, ContentOptimizerResult,
-    BulkUrlRequest, BulkUrlResult
+    BulkUrlRequest, BulkUrlResult, FullAuditRequest
 )
 from tasks.crawler import crawl_website
 from tasks.competitive import analyze_keyword_gap, calculate_share_of_voice, get_competitor_overview
 from celery_app import celery_app
 from tools.content_optimizer import optimize_content
 from tools.bulk_url_analyzer import analyze_urls_bulk
+from tools.full_audit import run_full_audit
 
 app = FastAPI(
     title="OpenSEO API",
@@ -312,6 +313,20 @@ async def analyze_bulk_direct(request: BulkUrlRequest, response: Response):
         response.headers["Content-Disposition"] = "attachment; filename=url-analysis.csv"
         response.headers["Content-Type"] = "text/csv"
         return result.export_csv
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/audit/full")
+async def run_full_audit_endpoint(request: FullAuditRequest):
+    """
+    Run one-shot, local-first SEO audit and return a unified scorecard.
+
+    This endpoint minimizes external dependencies and calculates metrics on-device.
+    """
+    try:
+        result = await run_full_audit(request.url, request.max_internal_urls)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
