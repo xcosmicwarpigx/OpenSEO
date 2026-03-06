@@ -15,7 +15,8 @@ class CrawlRequest(BaseModel):
     url: HttpUrl
     max_pages: int = 100
     respect_robots_txt: bool = True
-    check_core_web_vitals: bool = True
+    # Default to local-first analysis (no external API calls unless explicitly enabled)
+    check_core_web_vitals: bool = False
 
 
 # ==================== CONTENT ANALYSIS ====================

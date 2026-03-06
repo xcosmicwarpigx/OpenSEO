@@ -36,10 +36,10 @@ Comprehensive site crawling with Playwright for JavaScript-rendered pages:
 - **Internal linking analysis** (orphan pages, click depth, link distribution)
 - **Sitemap & robots.txt validation**
 
-### 2. Competitive Intelligence
-- **Keyword Gap Analysis** - symmetric difference between two domains
-- **Share of Voice (SoV)** - weighted visibility calculation
-- **Competitor Overview** - authority scores, traffic estimates, backlink data
+### 2. Competitive Intelligence (Local-First)
+- **Keyword Gap Analysis** - symmetric difference between two domains using on-site keyword extraction
+- **Share of Voice (SoV)** - weighted visibility calculation from locally extracted keyword sets
+- **Competitor Overview** - local crawl-derived authority and traffic estimates (no third-party SEO API required)
 
 ### 3. Content Optimizer Tool
 Detailed single-page content analysis:
@@ -242,14 +242,13 @@ The crawler checks for WCAG 2.1 compliance:
 
 ## Keyword Data Sources
 
-Competitive intelligence features use **simulated data** for demonstration. To use real data, integrate with:
+Competitive intelligence is now **local-first** and computed on-device by:
 
-- **SEMrush API** - Most comprehensive ($200+/month)
-- **Ahrefs API** - Great backlink data
-- **Serpstat API** - Budget-friendly option
-- **DataForSEO** - Pay-as-you-go model
+- Crawling discoverable pages from each domain (homepage links + sitemap when available)
+- Extracting on-page keyword frequencies
+- Deriving gap and visibility metrics from those keyword sets
 
-Update `backend/tasks/competitive.py` to call your preferred API.
+This avoids paid external SEO APIs by default. If you want third-party enrichment later (SEMrush/Ahrefs/etc.), extend `backend/tasks/competitive.py` as an optional data source.
 
 ## Configuration
 
