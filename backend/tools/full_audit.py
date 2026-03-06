@@ -11,12 +11,7 @@ from urllib.parse import urljoin, urlparse
 import httpx
 from bs4 import BeautifulSoup
 
-from models import (
-    ContentQuality,
-    HeadingStructure,
-    KeywordDensity,
-    ReadabilityScore,
-)
+from models import ContentQuality, HeadingStructure, KeywordDensity, ReadabilityScore
 from utils.accessibility_analyzer import analyze_accessibility
 from utils.content_analyzer import (
     analyze_content_quality,
@@ -40,6 +35,16 @@ from utils.sitemap_analyzer import (
 )
 
 
+DEFAULT_WEIGHTS = {
+    "technical": 0.30,
+    "content": 0.25,
+    "performance_local": 0.15,
+    "accessibility": 0.15,
+    "security": 0.10,
+    "internal_linking": 0.05,
+}
+
+
 def _extract_main_content_text(soup: BeautifulSoup) -> str:
     selectors = ["main", "article", "[role=main]", ".content", "#content", ".post"]
     for selector in selectors:
@@ -55,6 +60,22 @@ def _extract_main_content_text(soup: BeautifulSoup) -> str:
         tag.decompose()
 
     return body.get_text(separator=" ", strip=True)
+
+
+def calculate_weighted_score(scores: Dict[str, float], weights: Dict[str, float]) -> float:
+    return round(sum(scores.get(k, 0) * w for k, w in weights.items()), 2)
+
+
+def score_to_grade(score: float) -> str:
+    if score >= 90:
+        return "A"
+    if score >= 80:
+        return "B"
+    if score >= 70:
+        return "C"
+    if score >= 60:
+        return "D"
+    return "F"
 
 
 async def _check_url_status(url: str) -> Dict[str, Any]:
@@ -77,12 +98,13 @@ async def _check_url_status(url: str) -> Dict[str, Any]:
         }
 
 
-async def run_full_audit(url: str, max_internal_urls: int = 25) -> Dict[str, Any]:
+async def run_full_audit(url: str, max_internal_urls: int = 25, target_keywords: List[str] | None = None) -> Dict[str, Any]:
     parsed_input = urlparse(url)
     if not parsed_input.scheme:
         url = f"https://{url}"
     parsed = urlparse(url)
     base_domain = parsed.netloc
+    target_keywords = target_keywords or []
 
     async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
         start = time.time()
@@ -123,7 +145,7 @@ async def run_full_audit(url: str, max_internal_urls: int = 25) -> Dict[str, Any
         title,
         h1_text,
         meta_description,
-        []
+        target_keywords,
     )
     content_quality: ContentQuality = analyze_content_quality(content_text, headings, keyword_density)
 
@@ -227,15 +249,29 @@ async def run_full_audit(url: str, max_internal_urls: int = 25) -> Dict[str, Any
 
     internal_linking_score = max(0, min(100, internal_linking_score))
 
-    overall_score = round(
-        (technical_score * 0.3)
-        + (content_score * 0.25)
-        + (perf_score * 0.15)
-        + (accessibility.score * 0.15)
-        + (security_headers.score * 0.1)
-        + (internal_linking_score * 0.05),
-        2,
-    )
+    score_components = {
+        "technical": technical_score,
+        "content": content_score,
+        "performance_local": perf_score,
+        "accessibility": accessibility.score,
+        "security": security_headers.score,
+        "internal_linking": internal_linking_score,
+    }
+    overall_score = calculate_weighted_score(score_components, DEFAULT_WEIGHTS)
+    grade = score_to_grade(overall_score)
+
+    keyword_presence_summary = []
+    for kw in keyword_density:
+        keyword_presence_summary.append(
+            {
+                "keyword": kw.keyword,
+                "density_percent": kw.density_percent,
+                "in_title": kw.in_title,
+                "in_h1": kw.in_h1,
+                "in_meta_description": kw.in_meta_description,
+                "in_first_100_words": kw.in_first_100_words,
+            }
+        )
 
     recommendations: List[str] = []
     if not title:
@@ -255,17 +291,23 @@ async def run_full_audit(url: str, max_internal_urls: int = 25) -> Dict[str, Any
     if missing_schemas:
         recommendations.append("Add recommended structured data types for this page intent.")
 
+    if keyword_density:
+        for kw in keyword_density:
+            if not kw.in_title:
+                recommendations.append(f"Include target keyword '{kw.keyword}' in the title naturally.")
+            if not kw.in_h1:
+                recommendations.append(f"Include target keyword '{kw.keyword}' in the H1 naturally.")
+            if kw.density_percent < 0.5:
+                recommendations.append(f"Increase natural usage of '{kw.keyword}' in body copy (currently {kw.density_percent}%).")
+            if kw.density_percent > 3.0:
+                recommendations.append(f"Reduce repetition of '{kw.keyword}' to avoid over-optimization ({kw.density_percent}%).")
+
     return {
         "url": url,
         "overall_score": overall_score,
-        "scores": {
-            "technical": technical_score,
-            "content": content_score,
-            "performance_local": perf_score,
-            "accessibility": accessibility.score,
-            "security": security_headers.score,
-            "internal_linking": internal_linking_score,
-        },
+        "grade": grade,
+        "scores": score_components,
+        "weights": DEFAULT_WEIGHTS,
         "highlights": {
             "status_code": response.status_code,
             "response_time_ms": round(response_time_ms, 2),
@@ -281,15 +323,17 @@ async def run_full_audit(url: str, max_internal_urls: int = 25) -> Dict[str, Any
             "missing_recommended_schemas": [s.value for s in missing_schemas],
             "images_total": len(images),
             "images_missing_alt": len(images_without_alt),
+            "target_keywords_checked": len(keyword_density),
         },
         "components": {
             "readability": readability.dict(),
             "content_quality": content_quality.dict(),
+            "keyword_density": keyword_presence_summary,
             "security_headers": security_headers.dict(),
             "accessibility": accessibility.dict(),
             "robots_txt": robots_analysis.dict(),
             "sitemap": sitemap_analysis.dict() if sitemap_analysis else None,
         },
-        "recommendations": recommendations[:10],
+        "recommendations": recommendations[:15],
         "mode": "local-first",
     }

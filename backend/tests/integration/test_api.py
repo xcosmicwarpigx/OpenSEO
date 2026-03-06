@@ -145,20 +145,23 @@ class TestFullAuditEndpoint:
         assert response.status_code == 422
 
     def test_full_audit_endpoint(self, monkeypatch):
-        async def fake_audit(url: str, max_internal_urls: int = 25):
+        async def fake_audit(url: str, max_internal_urls: int = 25, target_keywords=None):
             return {
                 "url": url,
                 "overall_score": 88,
+                "grade": "B",
                 "scores": {"technical": 90, "content": 86, "performance_local": 82, "accessibility": 90, "security": 85, "internal_linking": 88},
                 "mode": "local-first",
-                "recommendations": []
+                "recommendations": [],
+                "target_keywords": target_keywords or []
             }
 
         import main
         monkeypatch.setattr(main, "run_full_audit", fake_audit)
 
-        response = client.post("/api/audit/full", json={"url": "https://example.com"})
+        response = client.post("/api/audit/full", json={"url": "https://example.com", "target_keywords": ["seo"]})
         assert response.status_code == 200
         data = response.json()
         assert data["mode"] == "local-first"
+        assert data["grade"] == "B"
         assert "overall_score" in data

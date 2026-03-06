@@ -174,6 +174,15 @@ npm run dev
 | `/api/crawl/{task_id}/result` | GET | Get full crawl results |
 | `/api/audit/full` | POST | Run one-shot local-first full SEO scorecard for a URL |
 
+Example request:
+```json
+{
+  "url": "https://example.com",
+  "max_internal_urls": 25,
+  "target_keywords": ["seo audit", "technical seo"]
+}
+```
+
 ### Competitive Intelligence
 | Endpoint | Method | Description |
 |----------|--------|-------------|

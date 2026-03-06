@@ -325,7 +325,11 @@ async def run_full_audit_endpoint(request: FullAuditRequest):
     This endpoint minimizes external dependencies and calculates metrics on-device.
     """
     try:
-        result = await run_full_audit(request.url, request.max_internal_urls)
+        result = await run_full_audit(
+            request.url,
+            request.max_internal_urls,
+            request.target_keywords,
+        )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

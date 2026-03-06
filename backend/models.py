@@ -433,3 +433,4 @@ class BulkUrlResult(BaseModel):
 class FullAuditRequest(BaseModel):
     url: str
     max_internal_urls: int = 25
+    target_keywords: List[str] = []
