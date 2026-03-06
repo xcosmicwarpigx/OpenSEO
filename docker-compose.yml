@@ -28,7 +28,8 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=http://localhost:8000
+      # Keep API calls same-origin via Vite proxy to avoid browser localhost issues
+      - VITE_API_URL=
     volumes:
       - ./frontend:/app
       - /app/node_modules
