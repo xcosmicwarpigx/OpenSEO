@@ -78,17 +78,31 @@ def score_to_grade(score: float) -> str:
     return "F"
 
 
+async def _safe_get(url: str, timeout: int = 20) -> tuple[httpx.Response, bool]:
+    """GET with TLS-fallback for environments with custom/intercepting CAs."""
+    try:
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+            return await client.get(url), False
+    except httpx.ConnectError as e:
+        if "CERTIFICATE_VERIFY_FAILED" not in str(e):
+            raise
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True, verify=False) as client:
+            return await client.get(url), True
+
+
 async def _check_url_status(url: str) -> Dict[str, Any]:
     try:
-        async with httpx.AsyncClient(timeout=8, follow_redirects=True) as client:
-            start = time.time()
-            resp = await client.get(url)
-            elapsed = (time.time() - start) * 1000
-            return {
-                "url": url,
-                "status": resp.status_code,
-                "response_time_ms": round(elapsed, 2),
-            }
+        start = time.time()
+        resp, used_insecure = await _safe_get(url, timeout=8)
+        elapsed = (time.time() - start) * 1000
+        out = {
+            "url": url,
+            "status": resp.status_code,
+            "response_time_ms": round(elapsed, 2),
+        }
+        if used_insecure:
+            out["note"] = "TLS verification failed; retried with verify=False"
+        return out
     except Exception as e:
         return {
             "url": url,
@@ -106,12 +120,11 @@ async def run_full_audit(url: str, max_internal_urls: int = 25, target_keywords:
     base_domain = parsed.netloc
     target_keywords = target_keywords or []
 
-    async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
-        start = time.time()
-        response = await client.get(url)
-        response_time_ms = (time.time() - start) * 1000
-        html = response.text
-        page_size_kb = len(response.content) / 1024
+    start = time.time()
+    response, used_insecure_tls = await _safe_get(url, timeout=20)
+    response_time_ms = (time.time() - start) * 1000
+    html = response.text
+    page_size_kb = len(response.content) / 1024
 
     soup = BeautifulSoup(html, "lxml")
 
@@ -324,6 +337,7 @@ async def run_full_audit(url: str, max_internal_urls: int = 25, target_keywords:
             "images_total": len(images),
             "images_missing_alt": len(images_without_alt),
             "target_keywords_checked": len(keyword_density),
+            "tls_retry_insecure": used_insecure_tls,
         },
         "components": {
             "readability": readability.dict(),
