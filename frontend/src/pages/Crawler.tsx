@@ -56,10 +56,10 @@ export default function Crawler() {
 
   return (
     <div>
-      <h2 className="text-3xl font-bold text-gray-900 mb-8">Site Crawler</h2>
+      <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">Site Crawler</h2>
       
       {/* Input Form */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+      <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="md:col-span-2">
             <label htmlFor="url-input" className="block text-sm font-medium text-gray-700 mb-2">
@@ -91,7 +91,7 @@ export default function Crawler() {
           </div>
         </div>
         
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-4 mb-6">
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -132,7 +132,7 @@ export default function Crawler() {
       {result && (
         <div className="space-y-6">
           {/* Summary Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <div className="bg-white p-4 rounded-lg border border-gray-200">
               <div className="flex items-center gap-2 text-gray-500 mb-1">
                 <Globe size={16} />
@@ -180,7 +180,7 @@ export default function Crawler() {
               <h3 className="text-lg font-semibold text-gray-900">Crawled Pages</h3>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="min-w-[760px] w-full">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL</th>
@@ -220,7 +220,7 @@ export default function Crawler() {
                 <h3 className="text-lg font-semibold text-gray-900">Issues Found</h3>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="min-w-[760px] w-full">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL</th>

@@ -72,11 +72,11 @@ export default function BulkAnalyzer() {
 
   return (
     <div>
-      <h2 className="text-3xl font-bold text-gray-900 mb-2">Bulk URL Analyzer</h2>
+      <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Bulk URL Analyzer</h2>
       <p className="text-gray-500 mb-8">Analyze multiple URLs for common SEO issues in seconds</p>
       
       {/* Input Form */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+      <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             URLs (one per line, max 50)
@@ -92,7 +92,7 @@ export default function BulkAnalyzer() {
         
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">Checks to Run</label>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -123,7 +123,7 @@ export default function BulkAnalyzer() {
           </div>
         </div>
         
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
           <button
             onClick={analyzeUrls}
             disabled={loading || !urls.trim()}
@@ -164,7 +164,7 @@ export default function BulkAnalyzer() {
       {result && (
         <div className="space-y-6">
           {/* Summary Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <div className="bg-white p-4 rounded-lg border border-gray-200">
               <p className="text-sm text-gray-500">Total URLs</p>
               <p className="text-2xl font-bold text-gray-900">{result.summary?.total_urls}</p>
@@ -185,7 +185,7 @@ export default function BulkAnalyzer() {
             </div>
           </div>
           
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white p-4 rounded-lg border border-gray-200">
               <p className="text-sm text-gray-500">Missing Titles</p>
               <p className="text-2xl font-bold text-red-600">{result.summary?.missing_titles}</p>
@@ -209,7 +209,7 @@ export default function BulkAnalyzer() {
               </p>
             </div>
             <div className="overflow-x-auto max-h-96 overflow-y-auto">
-              <table className="w-full">
+              <table className="min-w-[860px] w-full">
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>

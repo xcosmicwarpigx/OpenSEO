@@ -69,11 +69,11 @@ export default function ContentOptimizer() {
 
   return (
     <div>
-      <h2 className="text-3xl font-bold text-gray-900 mb-2">Content Optimizer</h2>
+      <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Content Optimizer</h2>
       <p className="text-gray-500 mb-8">Analyze your content quality and get actionable optimization suggestions</p>
       
       {/* Input Form */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+      <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">Page URL</label>
           <input
@@ -127,11 +127,11 @@ export default function ContentOptimizer() {
       {result && (
         <div className="space-y-6">
           {/* Overall Score */}
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <div className="flex items-center justify-between">
+          <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <p className="text-sm text-gray-500 mb-1">Content Score</p>
-                <p className={`text-5xl font-bold ${getScoreColor(result.overall_score)}`}>
+                <p className={`text-4xl sm:text-5xl font-bold ${getScoreColor(result.overall_score)}`}>
                   {result.overall_score}
                 </p>
                 <p className="text-sm text-gray-400 mt-1">out of 100</p>
@@ -149,9 +149,9 @@ export default function ContentOptimizer() {
           </div>
           
           {/* Readability Stats */}
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Readability Analysis</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-4 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-500">Flesch Score</p>
                 <p className="text-2xl font-semibold text-gray-900">
@@ -205,7 +205,7 @@ export default function ContentOptimizer() {
                       <p className="font-medium text-gray-900 mb-1">{suggestion.issue}</p>
                       <p className="text-sm text-gray-600 mb-2">{suggestion.recommendation}</p>
                       {suggestion.current_value && (
-                        <div className="flex gap-4 text-sm">
+                        <div className="flex flex-wrap gap-2 sm:gap-4 text-sm">
                           <span className="text-red-600 line-through">
                             Current: {suggestion.current_value}
                           </span>
@@ -229,7 +229,8 @@ export default function ContentOptimizer() {
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">Keyword Analysis</h3>
               </div>
-              <table className="w-full">
+              <div className="overflow-x-auto">
+                <table className="min-w-[680px] w-full">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Keyword</th>
@@ -255,12 +256,13 @@ export default function ContentOptimizer() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+                </table>
+              </div>
             </div>
           )}
           
           {/* Priority Actions */}
-          <div className="bg-gradient-to-r from-primary-500 to-primary-600 p-6 rounded-xl text-white">
+          <div className="bg-gradient-to-r from-primary-500 to-primary-600 p-4 sm:p-6 rounded-xl text-white">
             <h3 className="text-lg font-semibold mb-4">Top Priority Actions</h3>
             <ol className="list-decimal list-inside space-y-2">
               {result.prioritized_actions?.map((action: string, idx: number) => (

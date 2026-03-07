@@ -199,15 +199,15 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">SEO Command Center</h2>
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">SEO Command Center</h2>
         <p className="text-gray-600 mt-2">
           Enter one URL and get a full SEO scorecard, prioritized fixes, and exportable reports.
         </p>
       </div>
 
-      <form onSubmit={runAudit} className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm mb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <form onSubmit={runAudit} className="bg-white border border-gray-100 rounded-xl p-4 sm:p-6 shadow-sm mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">Website URL</label>
             <input
@@ -232,7 +232,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="mt-5 flex items-center gap-3">
+        <div className="mt-5 flex flex-wrap items-center gap-3">
           <button
             type="submit"
             disabled={isLoading}
@@ -267,14 +267,14 @@ export default function Dashboard() {
 
       {audit && (
         <div className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-100 shadow-sm">
               <p className="text-sm text-gray-500">Overall Score</p>
-              <p className="text-4xl font-bold text-gray-900 mt-2">{audit.overall_score}</p>
+              <p className="text-3xl sm:text-4xl font-bold text-gray-900 mt-2">{audit.overall_score}</p>
             </div>
-            <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+            <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-100 shadow-sm">
               <p className="text-sm text-gray-500">Letter Grade</p>
-              <p className={`text-4xl font-bold mt-2 ${getGradeColor(audit.grade)}`}>{audit.grade}</p>
+              <p className={`text-3xl sm:text-4xl font-bold mt-2 ${getGradeColor(audit.grade)}`}>{audit.grade}</p>
             </div>
             <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
               <p className="text-sm text-gray-500">Mode</p>
@@ -302,7 +302,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <Zap size={18} className="text-green-600" /> Quick Wins
@@ -340,12 +340,12 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-100 shadow-sm">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <Target size={18} className="text-primary-600" /> All Recommendations
             </h3>
-            <div className="overflow-auto">
-              <table className="min-w-full text-sm">
+            <div className="overflow-x-auto">
+              <table className="min-w-[700px] w-full text-sm">
                 <thead>
                   <tr className="text-left text-gray-500 border-b border-gray-100">
                     <th className="pb-2 pr-4">Recommendation</th>
