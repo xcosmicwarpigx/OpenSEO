@@ -55,6 +55,10 @@ ENDPOINT_CATALOG = {
         "overview_status": "/api/competitive/overview/result/{task_id}",
         "overview_deterministic": "/api/deterministic/competitive/overview/{domain}",
     },
+    "mcp": {
+        "server": "/api/mcp",
+        "analyze_site": "/api/mcp/analyze-site",
+    },
 }
 
 
@@ -452,6 +456,122 @@ async def run_full_audit_endpoint(request: FullAuditRequest):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/mcp/analyze-site")
+async def mcp_analyze_site(payload: Dict[str, Any]):
+    """Simple MCP-friendly endpoint: send URL, get JSON SEO package."""
+    url = payload.get("url")
+    if not url:
+        raise HTTPException(status_code=400, detail="'url' is required")
+
+    max_internal_urls = int(payload.get("max_internal_urls", 25))
+    target_keywords = payload.get("target_keywords", [])
+    if not isinstance(target_keywords, list):
+        raise HTTPException(status_code=400, detail="'target_keywords' must be an array of strings")
+
+    try:
+        result = await run_full_audit(url, max_internal_urls, target_keywords)
+        return {
+            "tool": "analyze_site",
+            "input": {
+                "url": url,
+                "max_internal_urls": max_internal_urls,
+                "target_keywords": target_keywords,
+            },
+            "result": result,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/mcp")
+async def mcp_server(body: Dict[str, Any]):
+    """
+    Minimal MCP JSON-RPC style endpoint.
+
+    Supports:
+    - tools/list
+    - tools/call (name=analyze_site)
+    """
+    request_id = body.get("id")
+    method = body.get("method")
+    params = body.get("params", {}) or {}
+
+    def _ok(result: Dict[str, Any]):
+        return {"jsonrpc": "2.0", "id": request_id, "result": result}
+
+    def _err(code: int, message: str):
+        return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
+
+    if method == "tools/list":
+        return _ok(
+            {
+                "tools": [
+                    {
+                        "name": "analyze_site",
+                        "description": "Run one-shot OpenSEO full audit for a URL and return a JSON package.",
+                        "inputSchema": {
+                            "type": "object",
+                            "required": ["url"],
+                            "properties": {
+                                "url": {"type": "string", "description": "Website URL to analyze"},
+                                "max_internal_urls": {
+                                    "type": "integer",
+                                    "default": 25,
+                                    "description": "Number of internal links to sample",
+                                },
+                                "target_keywords": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                    "default": [],
+                                    "description": "Optional keywords to evaluate",
+                                },
+                            },
+                        },
+                    }
+                ]
+            }
+        )
+
+    if method == "tools/call":
+        name = params.get("name")
+        arguments = params.get("arguments", {}) or {}
+        if name != "analyze_site":
+            return _err(-32601, f"Unknown tool: {name}")
+
+        url = arguments.get("url")
+        if not url:
+            return _err(-32602, "Missing required argument: url")
+
+        max_internal_urls = int(arguments.get("max_internal_urls", 25))
+        target_keywords = arguments.get("target_keywords", [])
+        if not isinstance(target_keywords, list):
+            return _err(-32602, "target_keywords must be an array")
+
+        try:
+            audit = await run_full_audit(url, max_internal_urls, target_keywords)
+            return _ok(
+                {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": f"OpenSEO audit completed for {url}",
+                        }
+                    ],
+                    "structuredContent": {
+                        "tool": "analyze_site",
+                        "url": url,
+                        "max_internal_urls": max_internal_urls,
+                        "target_keywords": target_keywords,
+                        "audit": audit,
+                    },
+                }
+            )
+        except Exception as e:
+            return _err(-32000, str(e))
+
+    return _err(-32601, f"Unsupported method: {method}")
 
 
 # ==================== DASHBOARD ENDPOINTS ====================
