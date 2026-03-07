@@ -1,5 +1,7 @@
 import asyncio
 import time
+import json
+import subprocess
 from typing import Set, Dict, List, Optional
 from urllib.parse import urljoin, urlparse, urldefrag
 from datetime import datetime
@@ -29,27 +31,78 @@ from utils.sitemap_analyzer import fetch_sitemap, parse_sitemap, analyze_sitemap
 settings = get_settings()
 
 
+def _extract_metric_from_lighthouse(audits: dict, key: str) -> Optional[float]:
+    metric = audits.get(key, {})
+    numeric = metric.get("numericValue")
+    return float(numeric) if numeric is not None else None
+
+
+def get_lighthouse_cwv(url: str) -> Optional[CoreWebVitals]:
+    """Run local Lighthouse against a URL and return CWV-like metrics."""
+    chrome_path = "/root/.cache/ms-playwright/chromium-1097/chrome-linux/chrome"
+
+    cmd = [
+        "lighthouse",
+        url,
+        "--output=json",
+        "--output-path=stdout",
+        "--quiet",
+        "--only-categories=performance",
+        "--chrome-flags=--headless --no-sandbox --disable-gpu",
+        f"--chrome-path={chrome_path}",
+    ]
+
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        if proc.returncode != 0:
+            return None
+
+        data = json.loads(proc.stdout)
+        audits = data.get("audits", {})
+        categories = data.get("categories", {})
+
+        return CoreWebVitals(
+            lcp=_extract_metric_from_lighthouse(audits, "largest-contentful-paint"),
+            cls=_extract_metric_from_lighthouse(audits, "cumulative-layout-shift"),
+            inp=_extract_metric_from_lighthouse(audits, "interaction-to-next-paint"),
+            ttfb=_extract_metric_from_lighthouse(audits, "server-response-time"),
+            score=int((categories.get("performance", {}).get("score", 0) or 0) * 100),
+        )
+    except Exception as e:
+        print(f"Lighthouse local CWV error for {url}: {e}")
+        return None
+
+
 async def get_pagespeed_insights(url: str) -> Optional[CoreWebVitals]:
-    """Fetch Core Web Vitals from Google PageSpeed Insights API."""
+    """
+    Local-first CWV collection.
+
+    1) Try Lighthouse locally (deterministic, no API key)
+    2) Fallback to PageSpeed API only if key is configured
+    """
+    local = get_lighthouse_cwv(url)
+    if local:
+        return local
+
     if not settings.google_pagespeed_api_key:
         return None
-    
+
     api_url = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
     params = {
         "url": url,
         "key": settings.google_pagespeed_api_key,
         "category": "PERFORMANCE"
     }
-    
+
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(api_url, params=params, timeout=60)
             data = response.json()
-            
+
             lighthouse = data.get("lighthouseResult", {})
             audits = lighthouse.get("audits", {})
             categories = lighthouse.get("categories", {})
-            
+
             return CoreWebVitals(
                 lcp=_extract_metric(audits, "largest-contentful-paint"),
                 cls=_extract_metric(audits, "cumulative-layout-shift"),

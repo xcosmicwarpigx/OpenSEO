@@ -7,6 +7,8 @@ RUN apt-get update && apt-get install -y \
     gcc \
     curl \
     ca-certificates \
+    nodejs \
+    npm \
     libglib2.0-0 \
     libnss3 \
     libnspr4 \
@@ -36,6 +38,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Install Playwright browsers
 RUN playwright install chromium
+
+# Local Lighthouse for deterministic, on-device CWV checks
+RUN npm install -g lighthouse@12
 
 # Copy application code
 COPY . .
