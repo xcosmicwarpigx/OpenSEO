@@ -17,9 +17,19 @@ async def analyze_single_url(url: str, checks: List[str]) -> UrlCheckResult:
     
     async with httpx.AsyncClient(follow_redirects=False, timeout=10) as client:
         start_time = asyncio.get_event_loop().time()
-        
+
         try:
-            response = await client.get(url)
+            try:
+                response = await client.get(url)
+            except httpx.ConnectError as e:
+                # Some server/host environments use TLS interception certs; retry once without verification.
+                if "CERTIFICATE_VERIFY_FAILED" in str(e):
+                    issues.append("TLS verification failed; retried with verify=False")
+                    async with httpx.AsyncClient(follow_redirects=False, timeout=10, verify=False) as insecure_client:
+                        response = await insecure_client.get(url)
+                else:
+                    raise
+
             response_time = (asyncio.get_event_loop().time() - start_time) * 1000
             status_code = response.status_code
             

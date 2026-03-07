@@ -6,6 +6,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     curl \
+    ca-certificates \
     libglib2.0-0 \
     libnss3 \
     libnspr4 \

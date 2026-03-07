@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Response
 from fastapi.middleware.cors import CORSMiddleware
 from celery.result import AsyncResult
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
+import asyncio
 
 from models import (
     CrawlRequest, CrawlResult, KeywordGapRequest, KeywordGapResult,
@@ -19,8 +20,64 @@ from tools.full_audit import run_full_audit
 app = FastAPI(
     title="OpenSEO API",
     description="Open source SEO analysis platform with advanced content optimization",
-    version="1.1.0"
+    version="1.2.0"
 )
+
+
+ENDPOINT_CATALOG = {
+    "crawler": {
+        "start": "/api/crawl",
+        "status": "/api/crawl/{task_id}",
+        "result": "/api/crawl/{task_id}/result",
+        "deterministic": "/api/deterministic/crawl",
+    },
+    "content_optimizer": {
+        "start": "/api/tools/content-optimizer",
+        "status": "/api/tools/content-optimizer/{task_id}",
+        "direct": "/api/tools/content-optimizer/analyze",
+    },
+    "bulk_url_analyzer": {
+        "start": "/api/tools/bulk-url-analyzer",
+        "status": "/api/tools/bulk-url-analyzer/{task_id}",
+        "direct": "/api/tools/bulk-url-analyzer/analyze",
+    },
+    "full_audit": {
+        "direct": "/api/audit/full",
+    },
+    "competitive": {
+        "keyword_gap_start": "/api/competitive/keyword-gap",
+        "keyword_gap_status": "/api/competitive/keyword-gap/{task_id}",
+        "keyword_gap_deterministic": "/api/deterministic/competitive/keyword-gap",
+        "sov_start": "/api/competitive/share-of-voice",
+        "sov_status": "/api/competitive/share-of-voice/{task_id}",
+        "sov_deterministic": "/api/deterministic/competitive/share-of-voice",
+        "overview_start": "/api/competitive/overview/{domain}",
+        "overview_status": "/api/competitive/overview/result/{task_id}",
+        "overview_deterministic": "/api/deterministic/competitive/overview/{domain}",
+    },
+}
+
+
+async def wait_for_task(task_id: str, timeout_seconds: int = 120, poll_interval: float = 1.0) -> Dict[str, Any]:
+    """Deterministically wait for a Celery task and return final payload."""
+    deadline = asyncio.get_event_loop().time() + timeout_seconds
+
+    while asyncio.get_event_loop().time() < deadline:
+        result = AsyncResult(task_id, app=celery_app)
+        status = result.status
+
+        if status == "SUCCESS":
+            return {"task_id": task_id, "status": status, "result": result.result}
+        if status == "FAILURE":
+            return {"task_id": task_id, "status": status, "error": str(result.result)}
+
+        await asyncio.sleep(poll_interval)
+
+    return {
+        "task_id": task_id,
+        "status": "TIMEOUT",
+        "error": f"Task did not complete within {timeout_seconds}s",
+    }
 
 # CORS for frontend
 app.add_middleware(
@@ -42,13 +99,22 @@ async def health():
     return {"status": "healthy"}
 
 
+@app.get("/api/catalog")
+async def api_catalog():
+    """Machine-readable endpoint catalog for frontend/test determinism."""
+    return {
+        "version": app.version,
+        "catalog": ENDPOINT_CATALOG,
+    }
+
+
 # ==================== CRAWLER ENDPOINTS ====================
 
 @app.post("/api/crawl", response_model=dict)
 async def start_crawl(request: CrawlRequest, background_tasks: BackgroundTasks):
     """Start a new website crawl with comprehensive analysis."""
     task = crawl_website.delay(
-        str(request.url),
+        request.url,
         request.max_pages,
         request.check_core_web_vitals
     )
@@ -90,6 +156,22 @@ async def get_crawl_result(task_id: str):
         raise HTTPException(status_code=400, detail="Crawl not completed yet")
     
     return task_result.result
+
+
+@app.post("/api/deterministic/crawl")
+async def deterministic_crawl(request: CrawlRequest, timeout_seconds: int = 180):
+    """Deterministic crawl endpoint: blocks until crawl finishes or times out."""
+    task = crawl_website.delay(
+        request.url,
+        request.max_pages,
+        request.check_core_web_vitals,
+    )
+    result = await wait_for_task(task.id, timeout_seconds=timeout_seconds)
+    if result["status"] == "TIMEOUT":
+        raise HTTPException(status_code=504, detail=result["error"])
+    if result["status"] == "FAILURE":
+        raise HTTPException(status_code=500, detail=result["error"])
+    return result
 
 
 # ==================== COMPETITIVE INTELLIGENCE ====================
@@ -191,6 +273,43 @@ async def get_overview_result(task_id: str):
     return response
 
 
+@app.post("/api/deterministic/competitive/keyword-gap")
+async def deterministic_keyword_gap(request: KeywordGapRequest, timeout_seconds: int = 120):
+    task = analyze_keyword_gap.delay(
+        request.domain_a,
+        request.domain_b,
+        request.max_keywords,
+    )
+    result = await wait_for_task(task.id, timeout_seconds=timeout_seconds)
+    if result["status"] == "TIMEOUT":
+        raise HTTPException(status_code=504, detail=result["error"])
+    if result["status"] == "FAILURE":
+        raise HTTPException(status_code=500, detail=result["error"])
+    return result
+
+
+@app.post("/api/deterministic/competitive/share-of-voice")
+async def deterministic_share_of_voice(request: ShareOfVoiceRequest, timeout_seconds: int = 120):
+    task = calculate_share_of_voice.delay(request.domains, request.keywords)
+    result = await wait_for_task(task.id, timeout_seconds=timeout_seconds)
+    if result["status"] == "TIMEOUT":
+        raise HTTPException(status_code=504, detail=result["error"])
+    if result["status"] == "FAILURE":
+        raise HTTPException(status_code=500, detail=result["error"])
+    return result
+
+
+@app.get("/api/deterministic/competitive/overview/{domain}")
+async def deterministic_overview(domain: str, timeout_seconds: int = 120):
+    task = get_competitor_overview.delay(domain)
+    result = await wait_for_task(task.id, timeout_seconds=timeout_seconds)
+    if result["status"] == "TIMEOUT":
+        raise HTTPException(status_code=504, detail=result["error"])
+    if result["status"] == "FAILURE":
+        raise HTTPException(status_code=500, detail=result["error"])
+    return result
+
+
 # ==================== CONTENT OPTIMIZER TOOL ====================
 
 @app.post("/api/tools/content-optimizer", response_model=dict)
@@ -210,7 +329,7 @@ async def start_content_optimizer(request: ContentOptimizerRequest):
     Returns actionable suggestions prioritized by impact.
     """
     task = celery_app.send_task(
-        'tools.content_optimizer.optimize_content_task',
+        'tools.content_optimizer_task.optimize_content_task',
         args=[request.dict()]
     )
     return {
@@ -270,7 +389,7 @@ async def start_bulk_url_analyzer(request: BulkUrlRequest):
         raise HTTPException(status_code=400, detail="Maximum 100 URLs per request")
     
     task = celery_app.send_task(
-        'tools.bulk_url_analyzer.analyze_bulk_task',
+        'tools.bulk_url_analyzer_task.analyze_bulk_task',
         args=[request.dict()]
     )
     return {

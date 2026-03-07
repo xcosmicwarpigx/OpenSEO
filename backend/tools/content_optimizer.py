@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Optional
 from playwright.async_api import async_playwright
 from bs4 import BeautifulSoup
 
-from models import ContentOptimizerRequest, ContentOptimizerResult, ContentOptimizationSuggestion
+from models import ContentOptimizerRequest, ContentOptimizerResult, ContentOptimizationSuggestion, HeadingStructure, KeywordDensity
 from utils.content_analyzer import (
     calculate_readability, calculate_keyword_density, analyze_content_quality,
     extract_top_keywords, generate_content_suggestions, calculate_content_score
@@ -58,11 +58,12 @@ async def fetch_page_content(url: str) -> Dict[str, Any]:
             headings = []
             for i in range(1, 7):
                 for h in soup.find_all(f'h{i}'):
-                    headings.append({
-                        'level': i,
-                        'text': h.get_text(strip=True),
-                        'word_count': len(h.get_text(strip=True).split())
-                    })
+                    text = h.get_text(strip=True)
+                    headings.append(HeadingStructure(
+                        level=i,
+                        text=text,
+                        word_count=len(text.split())
+                    ))
             
             # Count images
             images = soup.find_all('img')
@@ -116,15 +117,15 @@ async def optimize_content(request: ContentOptimizerRequest) -> ContentOptimizer
     if not keyword_density:
         top_keywords = extract_top_keywords(page_data['content_text'], top_n=5)
         keyword_density = [
-            type('KeywordDensity', (), {
-                'keyword': kw['keyword'],
-                'count': kw['count'],
-                'density_percent': kw['density_percent'],
-                'in_title': kw['keyword'] in page_data['title'].lower(),
-                'in_h1': kw['keyword'] in page_data['h1'].lower(),
-                'in_meta_description': kw['keyword'] in page_data['meta_description'].lower(),
-                'in_first_100_words': False
-            })()
+            KeywordDensity(
+                keyword=kw['keyword'],
+                count=kw['count'],
+                density_percent=kw['density_percent'],
+                in_title=kw['keyword'] in page_data['title'].lower(),
+                in_h1=kw['keyword'] in page_data['h1'].lower(),
+                in_meta_description=kw['keyword'] in page_data['meta_description'].lower(),
+                in_first_100_words=False,
+            )
             for kw in top_keywords
         ]
     

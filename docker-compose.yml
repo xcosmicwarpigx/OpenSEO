@@ -51,7 +51,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: openseo-worker
-    command: celery -A app.celery_app worker --loglevel=info
+    command: celery -A celery_app.celery_app worker --loglevel=info
     environment:
       - REDIS_URL=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379/0

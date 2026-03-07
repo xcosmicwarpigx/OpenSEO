@@ -1,4 +1,4 @@
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, field_validator
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -12,11 +12,21 @@ class CrawlStatus(str, Enum):
 
 
 class CrawlRequest(BaseModel):
-    url: HttpUrl
+    url: str
     max_pages: int = 100
     respect_robots_txt: bool = True
     # Default to local-first analysis (no external API calls unless explicitly enabled)
     check_core_web_vitals: bool = False
+
+    @field_validator("url")
+    @classmethod
+    def normalize_url(cls, v: str) -> str:
+        v = (v or "").strip()
+        if not v:
+            raise ValueError("URL is required")
+        if not v.startswith(("http://", "https://")):
+            v = f"https://{v}"
+        return v
 
 
 # ==================== CONTENT ANALYSIS ====================
