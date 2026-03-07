@@ -165,3 +165,76 @@ class TestFullAuditEndpoint:
         assert data["mode"] == "local-first"
         assert data["grade"] == "B"
         assert "overall_score" in data
+
+
+class TestMcpEndpoints:
+    def test_mcp_tools_list(self):
+        response = client.post("/api/mcp", json={
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/list",
+            "params": {}
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["jsonrpc"] == "2.0"
+        assert data["id"] == 1
+        assert "tools" in data["result"]
+        assert any(t["name"] == "analyze_site" for t in data["result"]["tools"])
+
+    def test_mcp_tools_call_analyze_site(self, monkeypatch):
+        async def fake_audit(url: str, max_internal_urls: int = 25, target_keywords=None):
+            return {
+                "url": url,
+                "overall_score": 77,
+                "grade": "C",
+                "scores": {"technical": 75, "content": 80, "performance_local": 70, "accessibility": 82, "security": 76, "internal_linking": 78},
+                "mode": "local-first",
+                "recommendations": [],
+            }
+
+        import main
+        monkeypatch.setattr(main, "run_full_audit", fake_audit)
+
+        response = client.post("/api/mcp", json={
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "analyze_site",
+                "arguments": {
+                    "url": "https://example.com",
+                    "target_keywords": ["seo"]
+                }
+            }
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["jsonrpc"] == "2.0"
+        assert data["id"] == 2
+        assert "structuredContent" in data["result"]
+        assert data["result"]["structuredContent"]["tool"] == "analyze_site"
+        assert data["result"]["structuredContent"]["audit"]["overall_score"] == 77
+
+    def test_mcp_analyze_site_direct_endpoint(self, monkeypatch):
+        async def fake_audit(url: str, max_internal_urls: int = 25, target_keywords=None):
+            return {
+                "url": url,
+                "overall_score": 91,
+                "grade": "A",
+                "scores": {"technical": 90, "content": 92, "performance_local": 88, "accessibility": 93, "security": 90, "internal_linking": 89},
+                "mode": "local-first",
+                "recommendations": [],
+            }
+
+        import main
+        monkeypatch.setattr(main, "run_full_audit", fake_audit)
+
+        response = client.post("/api/mcp/analyze-site", json={
+            "url": "https://example.com",
+            "target_keywords": ["seo"]
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["tool"] == "analyze_site"
+        assert data["result"]["overall_score"] == 91

@@ -2,6 +2,7 @@ from pydantic import BaseModel, HttpUrl, field_validator
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
+from urllib.parse import urlparse
 
 
 class CrawlStatus(str, Enum):
@@ -26,6 +27,14 @@ class CrawlRequest(BaseModel):
             raise ValueError("URL is required")
         if not v.startswith(("http://", "https://")):
             v = f"https://{v}"
+
+        parsed = urlparse(v)
+        host = parsed.netloc.strip().lower()
+        if not host:
+            raise ValueError("Invalid URL: missing host")
+        if host != "localhost" and "." not in host:
+            raise ValueError("Invalid URL: host must be a valid domain or localhost")
+
         return v
 
 

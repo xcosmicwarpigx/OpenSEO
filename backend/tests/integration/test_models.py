@@ -19,7 +19,7 @@ class TestCrawlRequest:
             respect_robots_txt=True
         )
         assert request.max_pages == 100
-        assert str(request.url) == "https://example.com/"
+        assert str(request.url) == "https://example.com"
     
     def test_default_max_pages(self):
         request = CrawlRequest(url="https://example.com")
