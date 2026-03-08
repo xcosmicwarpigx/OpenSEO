@@ -9,6 +9,7 @@ type ScoreMap = {
   accessibility: number
   security: number
   internal_linking: number
+  mobile_seo: number
 }
 
 type RecommendationItem = {

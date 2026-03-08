@@ -1,8 +1,10 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Response
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, StreamingResponse
 from celery.result import AsyncResult
 from typing import Optional, List, Dict, Any
 import asyncio
+import uuid
 
 from models import (
     CrawlRequest, CrawlResult, KeywordGapRequest, KeywordGapResult,
@@ -57,6 +59,8 @@ ENDPOINT_CATALOG = {
     },
     "mcp": {
         "server": "/api/mcp",
+        "sse": "/api/mcp/sse",
+        "messages": "/api/mcp/messages?session_id={session_id}",
         "analyze_site": "/api/mcp/analyze-site",
     },
 }
@@ -485,15 +489,8 @@ async def mcp_analyze_site(payload: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/mcp")
-async def mcp_server(body: Dict[str, Any]):
-    """
-    Minimal MCP JSON-RPC style endpoint.
-
-    Supports:
-    - tools/list
-    - tools/call (name=analyze_site)
-    """
+async def handle_mcp_jsonrpc(body: Dict[str, Any]) -> Dict[str, Any]:
+    """Shared MCP JSON-RPC handler used by POST and SSE message transports."""
     request_id = body.get("id")
     method = body.get("method")
     params = body.get("params", {}) or {}
@@ -572,6 +569,47 @@ async def mcp_server(body: Dict[str, Any]):
             return _err(-32000, str(e))
 
     return _err(-32601, f"Unsupported method: {method}")
+
+
+@app.post("/api/mcp")
+async def mcp_server(body: Dict[str, Any]):
+    """Minimal MCP JSON-RPC style endpoint (HTTP POST)."""
+    result = await handle_mcp_jsonrpc(body)
+    return JSONResponse(result)
+
+
+_mcp_sse_sessions: Dict[str, bool] = {}
+
+
+@app.get("/api/mcp/sse")
+async def mcp_sse(request: Request):
+    """SSE-compatible MCP bootstrap endpoint for clients expecting streamable transport."""
+    session_id = str(uuid.uuid4())
+    _mcp_sse_sessions[session_id] = True
+
+    async def event_stream():
+        endpoint = str(request.url_for("mcp_messages")) + f"?sessionId={session_id}"
+        yield f"event: endpoint\ndata: {endpoint}\n\n"
+
+        while _mcp_sse_sessions.get(session_id, False):
+            if await request.is_disconnected():
+                _mcp_sse_sessions.pop(session_id, None)
+                break
+            yield ": keepalive\n\n"
+            await asyncio.sleep(15)
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@app.post("/api/mcp/messages")
+async def mcp_messages(body: Dict[str, Any], session_id: Optional[str] = None, sessionId: Optional[str] = None):
+    """Message endpoint paired with /api/mcp/sse for SSE-style MCP clients."""
+    sid = session_id or sessionId
+    if not sid or sid not in _mcp_sse_sessions:
+        raise HTTPException(status_code=404, detail="Unknown or expired MCP session")
+
+    result = await handle_mcp_jsonrpc(body)
+    return JSONResponse(result)
 
 
 # ==================== DASHBOARD ENDPOINTS ====================

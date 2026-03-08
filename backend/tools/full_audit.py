@@ -36,12 +36,13 @@ from utils.sitemap_analyzer import (
 
 
 DEFAULT_WEIGHTS = {
-    "technical": 0.30,
-    "content": 0.25,
-    "performance_local": 0.15,
-    "accessibility": 0.15,
-    "security": 0.10,
+    "technical": 0.26,
+    "content": 0.22,
+    "performance_local": 0.14,
+    "accessibility": 0.14,
+    "security": 0.09,
     "internal_linking": 0.05,
+    "mobile_seo": 0.10,
 }
 
 
@@ -76,6 +77,82 @@ def score_to_grade(score: float) -> str:
     if score >= 60:
         return "D"
     return "F"
+
+
+def analyze_mobile_seo(soup: BeautifulSoup, response_time_ms: float, page_size_kb: float) -> Dict[str, Any]:
+    """Heuristic mobile-friendliness checks for mobile-first SEO scoring."""
+    score = 100
+    checks: Dict[str, Any] = {}
+
+    viewport = soup.find("meta", attrs={"name": "viewport"})
+    viewport_content = viewport.get("content", "") if viewport else ""
+    has_responsive_viewport = "width=device-width" in viewport_content.lower()
+    checks["responsive_viewport"] = has_responsive_viewport
+    if not has_responsive_viewport:
+        score -= 20
+
+    # Responsive images coverage
+    images = soup.find_all("img")
+    responsive_images = 0
+    missing_dimensions = 0
+    for img in images:
+        if img.get("srcset") or img.get("sizes"):
+            responsive_images += 1
+        if not img.get("width") or not img.get("height"):
+            missing_dimensions += 1
+
+    total_images = len(images)
+    responsive_ratio = (responsive_images / total_images) if total_images else 1.0
+    checks["responsive_images_ratio"] = round(responsive_ratio, 3)
+    checks["images_missing_dimensions"] = missing_dimensions
+    if total_images and responsive_ratio < 0.5:
+        score -= 12
+    if missing_dimensions > 0:
+        score -= min(10, missing_dimensions * 2)
+
+    # Tap targets
+    tap_targets = soup.find_all(["a", "button", "input", "select", "textarea"])
+    small_targets = 0
+    for t in tap_targets:
+        style = (t.get("style") or "").lower()
+        cls = " ".join(t.get("class", [])).lower()
+        if "small" in cls or "tiny" in cls or "font-size:10" in style or "font-size:11" in style:
+            small_targets += 1
+    checks["tap_targets_count"] = len(tap_targets)
+    checks["likely_small_tap_targets"] = small_targets
+    if small_targets > 0:
+        score -= min(10, small_targets * 2)
+
+    # Font sizing/readability hints
+    html_style = (soup.find("html").get("style", "") if soup.find("html") else "").lower()
+    body_style = (soup.find("body").get("style", "") if soup.find("body") else "").lower()
+    tiny_font_hint = any(x in (html_style + body_style) for x in ["font-size:10", "font-size:11", "font-size:12"])
+    checks["tiny_font_hint"] = tiny_font_hint
+    if tiny_font_hint:
+        score -= 8
+
+    # Mobile performance proxies
+    checks["response_time_ms"] = round(response_time_ms, 2)
+    checks["page_size_kb"] = round(page_size_kb, 2)
+    if response_time_ms > 1800:
+        score -= 10
+    if page_size_kb > 1200:
+        score -= 10
+
+    # Intrusive fixed overlays (simple heuristic)
+    fixed_overlay_count = 0
+    for el in soup.find_all(True):
+        style = (el.get("style") or "").lower()
+        cls = " ".join(el.get("class", [])).lower()
+        if "position:fixed" in style and ("popup" in cls or "modal" in cls or "overlay" in cls):
+            fixed_overlay_count += 1
+    checks["fixed_overlay_hints"] = fixed_overlay_count
+    if fixed_overlay_count > 0:
+        score -= min(10, fixed_overlay_count * 4)
+
+    score = max(0, min(100, score))
+    checks["score"] = score
+    return checks
 
 
 async def _safe_get(url: str, timeout: int = 20) -> tuple[httpx.Response, bool]:
@@ -169,6 +246,8 @@ async def run_full_audit(url: str, max_internal_urls: int = 25, target_keywords:
     missing_schemas = get_missing_recommended_schemas(schemas, page_hints)
 
     accessibility = analyze_accessibility(soup, url)
+    mobile_checks = analyze_mobile_seo(soup, response_time_ms, page_size_kb)
+    mobile_seo_score = mobile_checks["score"]
 
     internal_links = []
     for a in soup.find_all("a", href=True):
@@ -269,6 +348,7 @@ async def run_full_audit(url: str, max_internal_urls: int = 25, target_keywords:
         "accessibility": accessibility.score,
         "security": security_headers.score,
         "internal_linking": internal_linking_score,
+        "mobile_seo": mobile_seo_score,
     }
     overall_score = calculate_weighted_score(score_components, DEFAULT_WEIGHTS)
     grade = score_to_grade(overall_score)
@@ -304,6 +384,13 @@ async def run_full_audit(url: str, max_internal_urls: int = 25, target_keywords:
     if missing_schemas:
         recommendations.append("Add recommended structured data types for this page intent.")
 
+    if not mobile_checks.get("responsive_viewport", False):
+        recommendations.append("Add a responsive viewport meta tag for mobile-first indexing.")
+    if mobile_checks.get("responsive_images_ratio", 1) < 0.5:
+        recommendations.append("Use responsive images (srcset/sizes) for better mobile rendering.")
+    if mobile_checks.get("images_missing_dimensions", 0) > 0:
+        recommendations.append("Set width/height on images to reduce mobile layout shifts.")
+
     if keyword_density:
         for kw in keyword_density:
             if not kw.in_title:
@@ -338,6 +425,7 @@ async def run_full_audit(url: str, max_internal_urls: int = 25, target_keywords:
             "images_missing_alt": len(images_without_alt),
             "target_keywords_checked": len(keyword_density),
             "tls_retry_insecure": used_insecure_tls,
+            "mobile_seo_score": mobile_seo_score,
         },
         "components": {
             "readability": readability.dict(),
@@ -345,6 +433,7 @@ async def run_full_audit(url: str, max_internal_urls: int = 25, target_keywords:
             "keyword_density": keyword_presence_summary,
             "security_headers": security_headers.dict(),
             "accessibility": accessibility.dict(),
+            "mobile_seo": mobile_checks,
             "robots_txt": robots_analysis.dict(),
             "sitemap": sitemap_analysis.dict() if sitemap_analysis else None,
         },

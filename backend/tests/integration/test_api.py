@@ -182,6 +182,13 @@ class TestMcpEndpoints:
         assert "tools" in data["result"]
         assert any(t["name"] == "analyze_site" for t in data["result"]["tools"])
 
+    def test_mcp_sse_bootstrap(self):
+        with client.stream("GET", "/api/mcp/sse") as response:
+            assert response.status_code == 200
+            first_chunk = next(response.iter_text())
+            assert "event: endpoint" in first_chunk
+            assert "/api/mcp/messages?session_id=" in first_chunk
+
     def test_mcp_tools_call_analyze_site(self, monkeypatch):
         async def fake_audit(url: str, max_internal_urls: int = 25, target_keywords=None):
             return {
